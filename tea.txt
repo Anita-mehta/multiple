@@ -1,0 +1,196 @@
+Watering IntentService
+In this exercise we will start by creating an IntentService class called PlantWateringService that extends from IntentService.
+
+public class PlantWateringService extends IntentService
+To keep things organized, it’s best to define the actions that the IntentService can handle, we will start by defining our first action as ACTION_WATER_PLANTS
+
+public static final String ACTION_WATER_PLANTS =
+                    "com.example.android.mygarden.action.water_plants";
+Next we will create a static method called startActionWaterPlants that allows explicitly triggering the Service to perform this action, inside simply create an intent that refers to the same class and set the action to ACTION_WATER_PLANTS and call start service
+
+public static void startActionWaterPlants(Context context) {
+        Intent intent = new Intent(context, PlantWateringService.class);
+        intent.setAction(ACTION_WATER_PLANTS);
+        context.startService(intent);
+    }
+To handle this action we need to override onHandleIntent, where you can extract the action and handle each action type separately
+
+@Override
+    protected void onHandleIntent(Intent intent) {
+        if (intent != null) {
+            final String action = intent.getAction();
+            if (ACTION_WATER_PLANTS.equals(action)) {
+                handleActionWaterPlants();
+            }
+        }
+    }
+Then finally we implement the handleActionWaterPlants method. To water all plants we just run an update query setting the last watered time to now, but only for those plants that are still alive. To check if a plant is still alive, you can compare the last watered time with the time now and if the difference is larger than MAX_AGE_WITHOUT_WATER, then the plant is dead!
+
+private void handleActionWaterPlants() {
+   Uri PLANTS_URI = BASE_CONTENT_URI.buildUpon().appendPath(PATH_PLANTS).build();
+   ContentValues contentValues = new ContentValues();
+   long timeNow = System.currentTimeMillis();
+   contentValues.put(PlantContract.PlantEntry.COLUMN_LAST_WATERED_TIME, timeNow);
+   // Update only plants that are still alive
+   getContentResolver().update(
+      PLANTS_URI,
+      contentValues,
+      PlantContract.PlantEntry.COLUMN_LAST_WATERED_TIME+">?",
+      new String[]{String.valueOf(timeNow - PlantUtils.MAX_AGE_WITHOUT_WATER)});
+}
+Now that we have our IntentService ready, let’s add the water drop image to our widget’s layout
+
+<ImageView
+        android:id="@+id/widget_water_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:src="@drawable/water_drop_blue" />
+
+Just like we did earlier, we need to create a PendingIntent to handle the click event on the water drop image, this time however launching a service instead of an activity
+
+// Add the wateringservice click handler
+Intent wateringIntent = new Intent(context, PlantWateringService.class);
+wateringIntent.setAction(PlantWateringService.ACTION_WATER_PLANTS);
+PendingIntent wateringPendingIntent = PendingIntent.getService(
+                                             context, 
+                                             0, 
+                                             wateringIntent, 
+                                             PendingIntent.FLAG_UPDATE_CURRENT);
+views.setOnClickPendingIntent(R.id.widget_water_button, wateringPendingIntent)
+
+
+
+Sending Extras to IntentService
+The main change we will be doing in this exercise is replacing the Water All Plants action with a more specific Water Plant one. This will water an individual plant given its ID instead of watering all the plants in the garden.
+
+To be able to water a specific plant you will need to launch the same IntentService but will also need to pass the Plant ID with it.
+
+To do so, once you create the wateringIntent that will launch the PlantWateringService, you can use the method putExtra() where you can set a name and a value just like you would for any normal Intent.
+
+Intent wateringIntent = new Intent(context, PlantWateringService.class);
+wateringIntent.setAction(PlantWateringService.ACTION_WATER_PLANT);
+wateringIntent.putExtra(PlantWateringService.EXTRA_PLANT_ID, plantId);
+PendingIntent wateringPendingIntent = PendingIntent.getService(context, 0, wateringIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+views.setOnClickPendingIntent(R.id.widget_water_button, wateringPendingIntent);
+In this exercise, the goal is to complete the following changes in My Garden app:
+
+1) Change the water-all click event in the widget to water only that specific plant shown which involves
+
+Add the plantId as a new parameter to the updatePlantWidgets method
+Change the watering service action from ACTION_WATER_PLANTS to ACTION_WATER_PLANT
+Change the update query to use a SINGLE_PLANT_URI
+Define and using EXTRA_PLANT_ID to pass the plant ID to the intent service from the widget
+Call putExtra and passing the plantId when creating the pending intent for the watering service
+Call getLongExtra to extract the plnatId in the service
+Make sure you update the widgets after watering by calling startActionUpdatePlantWidgets
+2) Hide the water drop button in the widget if it’s been less than MIN_AGE_BETWEEN_WATER since it was last watered
+
+Add a new boolean parameter to updatePlantWidgets to indicate if the plant can be watered or not
+Use setViewVisibility to change the widget_water_button Visibility from View.VISIBLE to View.INVISIBLE to hide it
+3) Change the widget plant image click handler to launch the Detail Activity for that plant rather than the Main Activity
+
+If plantId was INVALID_PLANT_ID, then launch the MainActivity as usual
+Otherwise launch the PlantDetailActivity passing in the plantId as EXTRA_PLANT_ID
+4) Add a TextView underneath the plant image that displays the plant ID in both the main activity as well as in the widget to help identify each plant
+
+Exercise: Adding More Features
+In this exercise you will get to add a few more features to our app based on the feedback we collected from users.
+
+Change the water-all click event in the widget to water only that specific plant shown which involves
+Add the plantId as a new parameter to the updatePlantWidgets method
+Change the watering service action from ACTION_WATER_PLANTS to ACTION_WATER_PLANT
+Change the update query to use a SINGLE_PLANT_URI
+Define and using EXTRA_PLANT_ID to pass the plant ID to the intent service from the widget
+Call putExtra and passing the plantId when creating the pending intent for the watering service
+Call getLongExtra to extract the plnatId in the service
+Make sure you update the widgets after watering by calling startActionUpdatePlantWidgets
+Hide the water drop button in the widget if it’s been less than MIN_AGE_BETWEEN_WATER since it was last watered
+Add a new boolean parameter to updatePlantWidgets to indicate if the plant can be watered or not
+Use setViewVisibility to change the widget_water_button Visibility from View.VISIBLE to View.INVISIBLE to hide it
+Change the widget plant image click handler to launch the Detail Activity for that plant rather than the Main Activity
+If plantId was INVALID_PLANT_ID, then launch the MainActivity as usual
+Otherwise launch the PlantDetailActivity passing in the plantId as EXTRA_PLANT_ID
+Add a TextView underneath the plant image that displays the plant ID in both the main activity as well as in the widget to help identify each plant
+Exercise Code
+Exercise: TWID.04-Exercise-Extras
+
+Now it's your turn, follow the following steps to complete this exercise
+
+Task List
+
+
+
+
+
+
+Summary
+That’s all for this lesson! Let’s recap on what we’ve learned in it:
+
+Widgets are a fun and easy way to interact with any app, but they could be resource intensive if not managed properly
+Widgets handle their own update schedule, but remember that they run on the main UI thread so to offload any heavy tasks to a new thread
+IntentServices are a great way to do so, they can communicate back to the widget at any time
+Widgets layouts are based on RemoteViews, which for the most part behave like normal Views with some exceptions like:
+Click events are handled with pending intents and collections need a PendingIntent Template
+Not all view types are supported
+Collection views require a remote service and a remote view factory to act as an adapter
+Now that we’re done, feel free to explore more of the widget capabilities like building animations using ViewFlipper or flipping through photo galleries using Stack Views.
+
+
+
+
+Intent Stubbing Code Example
+Let's see an example of Intent Stubbing in practice. Navigate to the IntentBasicSample code created by the Google team.
+
+Analyze DialerActivity
+This project contains a DialerActivity where users can enter a phone number.
+
+When the "Call Number" is pressed, the inputted number is sent to the native Android app using an ACTION_CALL Intent. There is also a "Pick Number" button which starts a dummy ContactsActivity that will be used to demonstrate Intent Stubbing.
+
+
+DialerActivity screen
+
+Analyze DialerActivityTest
+The project also contains a DialerActivityTest file.
+
+Let's break this test down.
+
+@RunWith
+This test runs with AndroidJUnit4 which we've seen before:
+
+@RunWith(AndroidJUnit4.class)
+@Rule
+Instead of the ActivityTestRule that we've seen before, this test uses the IntentsTestRule. This rule is an extension of the ActivityTestRule, which initializes Intents before each Espresso test (@Test) is run and releases the Intent after each test is run. The associated activity is terminated after each test.
+
+
+@Before - stubAllExternalIntents()
+As mentioned in the comment in the code snippet below, by default Espresso Intent does not stub any Intents; instead, stubbing must be set up each time a test is run. The method stubAllExternalIntents() makes sure all external Intents are blocked.
+
+
+It uses the intending() method associated with stubbing and takes not(isInternal()) as its IntentMatcher parameter. isInternal() matches an intent if its package is the same as the target package for the instrumentation test, therefore not(isInternal()) checks that the intent's package does not match the target package for the test. If that's the case respond with:
+
+new ActivityResult(Activity.RESULT_OK, null)
+ActivityResult(int resultCode, Intent resultData) has 2 parameters.
+
+resultCode - Is the code sent back to the original activity. RESULT_OK indicates the operation was successful.
+resultData - Is the data to send back to the original activity. null indicates no data is sent back.
+@Before - grantPhonePermission()
+Intended for Android M+, ensures permission to use the phone is granted before running the DialerActivityTest.
+
+
+@Test - pickContactButton_click_SelectsPhoneNumber()
+This test mocks a user clicking the "Contact Button" in the DialerActivity, an intent to the ContactsActivity is then stubbed to return a hard-coded VALID_PHONE_NUMBER, and the finally the test checks that the phone number sent back is displayed in the UI.
+
+The intent is stubbed here:
+
+
+hasComponent() can match an intent by class name, package name or short class name. Here we match by ShortClassName for the ContactsActivity. When matched, respond with:
+
+new ActivityResult(Activity.RESULT_OK, ContactsActivity.createResultData(VALID_PHONE_NUMBER))
+ActivityResult(int resultCode, Intent resultData) has 2 parameters.
+
+resultCode - the code sent back to the original activity. RESULT_OK indicates the operation was successful.
+resultData - the data to send back to the original activity. In this case ContactsActivity.createResultData(VALID_PHONE_NUMBER) creates a resultData object containing the phone number that will be sent back to the DialerActivity.
+Summary
+The Intent Stubbing test, pickContactButton_click_SelectsPhoneNumber() stubs the intent that is sent when the user clicks the "Contact Button" by passing a hard-coded phone number, VALID_PHONE_NUMBER.
+
